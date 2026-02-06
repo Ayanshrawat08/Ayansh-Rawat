@@ -83,6 +83,46 @@
             border: 1px solid rgba(34, 197, 94, 0.2);
         }
 
+        /* Server Status Components */
+        .status-tag {
+            padding: 2px 10px;
+            border-radius: 100px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .online { background: rgba(34, 197, 94, 0.1); color: var(--primary); }
+        .offline { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+        .player-chip {
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            padding: 6px 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .loader-overlay {
+            position: absolute;
+            inset: 0;
+            background: var(--card-bg);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: inherit;
+            visibility: hidden;
+            opacity: 0;
+            transition: 0.3s;
+        }
+        .is-loading .loader-overlay { visibility: visible; opacity: 1; }
+
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         .chat-container {
             min-height: 450px;
             display: flex;
@@ -114,6 +154,7 @@
                 <!-- Desktop Nav -->
                 <div class="hidden md:flex space-x-1 lg:space-x-4">
                     <button onclick="showPage('home')" class="nav-link px-3 py-2 text-sm font-medium hover:text-green-400 transition">Home</button>
+                    <button onclick="showPage('status')" class="nav-link px-3 py-2 text-sm font-medium hover:text-green-400 transition flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span> Server Status</button>
                     <button onclick="showPage('join')" class="nav-link px-3 py-2 text-sm font-medium hover:text-green-400 transition">Join Now</button>
                     <button onclick="showPage('start')" class="nav-link px-3 py-2 text-sm font-medium hover:text-green-400 transition">Start Server</button>
                     <button onclick="showPage('modes')" class="nav-link px-3 py-2 text-sm font-medium hover:text-green-400 transition">Game Modes</button>
@@ -136,6 +177,7 @@
         <!-- Mobile Dropdown -->
         <div id="mobile-menu" class="hidden md:hidden bg-slate-900 border-b border-white/10 p-4 space-y-2">
             <button onclick="showPage('home')" class="block w-full text-left px-4 py-2 rounded hover:bg-white/5">Home</button>
+            <button onclick="showPage('status')" class="block w-full text-left px-4 py-2 rounded hover:bg-white/5 text-green-400">Server Status</button>
             <button onclick="showPage('join')" class="block w-full text-left px-4 py-2 rounded hover:bg-white/5">Join Now</button>
             <button onclick="showPage('start')" class="block w-full text-left px-4 py-2 rounded hover:bg-white/5">Start Server</button>
             <button onclick="showPage('modes')" class="block w-full text-left px-4 py-2 rounded hover:bg-white/5">Game Modes</button>
@@ -163,8 +205,8 @@
                     <button onclick="showPage('join')" class="btn-gradient w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white text-lg flex items-center justify-center gap-2">
                         <i data-lucide="play-circle"></i> Join Now
                     </button>
-                    <button onclick="showPage('start')" class="bg-white/5 hover:bg-white/10 border border-white/10 w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white text-lg transition">
-                        Start Server
+                    <button onclick="showPage('status')" class="bg-white/5 hover:bg-white/10 border border-white/10 w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-white text-lg transition">
+                        Server Status
                     </button>
                 </div>
             </div>
@@ -196,6 +238,78 @@
             <h2 class="text-3xl font-bold mb-8 text-center">Featured Game Modes</h2>
             <div id="game-modes-grid" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <!-- Injected via JS -->
+            </div>
+        </section>
+
+        <!-- PAGE: SERVER STATUS -->
+        <section id="status" class="page-section max-w-2xl mx-auto">
+            <h2 class="text-4xl font-bold mb-4 text-center">Live Server Tracker</h2>
+            <p class="text-center text-gray-400 mb-8">Real-time statistics for MineFun Network.</p>
+
+            <div id="status-card" class="card rounded-3xl overflow-hidden relative shadow-2xl">
+                <!-- Loader Overlay -->
+                <div id="status-loader" class="loader-overlay">
+                    <div class="spin w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full"></div>
+                </div>
+
+                <div class="p-6 border-b border-white/5 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-black/40 rounded-xl flex items-center justify-center overflow-hidden border border-white/10">
+                            <img id="s-icon" src="" class="hidden w-full h-full object-cover">
+                            <i id="s-icon-none" data-lucide="server" class="text-gray-600"></i>
+                        </div>
+                        <div>
+                            <h2 class="font-bold text-lg">MineFun Network</h2>
+                            <div id="s-badge" class="status-tag offline inline-flex items-center gap-1.5 mt-1">
+                                <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                                <span id="s-text">Checking...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="refreshServerStatus()" class="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center transition">
+                        <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+                    </button>
+                </div>
+
+                <div class="p-2 bg-black/20 flex gap-1 mx-6 mt-6 rounded-xl">
+                    <button onclick="setTrackerMode('java')" id="m-java" class="flex-1 py-2 rounded-lg text-sm font-bold transition bg-white/10 text-white">Java Edition</button>
+                    <button onclick="setTrackerMode('bedrock')" id="m-bedrock" class="flex-1 py-2 rounded-lg text-sm font-bold transition text-gray-500">Bedrock / Mobile</button>
+                </div>
+
+                <div class="p-6">
+                    <div id="s-motd" class="bg-black/30 p-4 rounded-xl text-sm font-mono text-gray-400 mb-6 min-h-[60px]">
+                        Querying server...
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/5 p-4 rounded-xl border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Players</span>
+                            <span id="s-players" class="text-lg font-bold">0 / 0</span>
+                        </div>
+                        <div class="bg-white/5 p-4 rounded-xl border border-white/5">
+                            <span class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Version</span>
+                            <span id="s-version" class="text-lg font-bold">---</span>
+                        </div>
+                    </div>
+
+                    <div id="s-player-list" class="mt-8 hidden">
+                        <h4 class="text-[10px] uppercase font-bold text-gray-500 mb-3">Online Players</h4>
+                        <div id="s-player-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-32 overflow-y-auto pr-2">
+                            <!-- Players injected here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-black/40 border-t border-white/5 flex items-center justify-between text-[10px] text-gray-500 font-bold px-6">
+                    <span id="s-last">Updated: Just now</span>
+                    <div class="flex items-center gap-3">
+                        <span class="text-blue-400 select-all cursor-pointer" onclick="copyText('MineFunWorld.aternos.me:25725')">MineFunWorld.aternos.me:25725</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 p-6 bg-blue-500/5 rounded-2xl border border-blue-500/10 text-center">
+                <p class="text-sm text-blue-300">Server offline? Visit the <span class="underline cursor-pointer" onclick="showPage('start')">Start Server</span> page to wake it up!</p>
             </div>
         </section>
 
@@ -492,11 +606,15 @@
     </footer>
 
     <!-- Toast for copying IP -->
-    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full font-bold shadow-lg opacity-0 pointer-events-none transition-all">
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 bg-green-600 text-white px-6 py-3 rounded-full font-bold shadow-lg opacity-0 pointer-events-none transition-all z-[100]">
         IP Copied to Clipboard!
     </div>
 
     <script>
+        // CONFIG
+        const SERVER_IP = "MineFunWorld.aternos.me:25725";
+        let trackerMode = 'java';
+
         // Game Modes Data
         const gameModes = [
             { name: "Survival", icon: "tree-pine", color: "green", desc: "The classic Minecraft experience with custom twists." },
@@ -517,9 +635,113 @@
             document.getElementById(pageId).classList.add('active');
             window.scrollTo(0, 0);
             document.getElementById('mobile-menu').classList.add('hidden');
+            
+            // Auto refresh if landing on status
+            if(pageId === 'status') refreshServerStatus();
         }
 
-        // Initialize Icons & Content
+        // Server Tracker Functions
+        async function refreshServerStatus() {
+            const loader = document.getElementById('status-loader');
+            loader.style.visibility = 'visible';
+            loader.style.opacity = '1';
+            
+            const endpoint = trackerMode === 'java' ? `2/${SERVER_IP}` : `bedrock/2/${SERVER_IP}`;
+            
+            try {
+                const res = await fetch(`https://api.mcsrvstat.us/${endpoint}`);
+                const data = await res.json();
+                renderStatus(data);
+            } catch (e) {
+                document.getElementById('s-motd').innerText = "Failed to connect to tracker API.";
+            } finally {
+                setTimeout(() => {
+                    loader.style.opacity = '0';
+                    loader.style.visibility = 'hidden';
+                }, 400);
+            }
+        }
+
+        function renderStatus(data) {
+            const isOnline = data.online;
+            const badge = document.getElementById('s-badge');
+            const motd = document.getElementById('s-motd');
+            const iconImg = document.getElementById('s-icon');
+            const iconNone = document.getElementById('s-icon-none');
+            const pArea = document.getElementById('s-player-list');
+            const pGrid = document.getElementById('s-player-grid');
+
+            badge.className = `status-tag ${isOnline ? 'online' : 'offline'}`;
+            document.getElementById('s-text').innerText = isOnline ? 'Online' : 'Offline';
+
+            if(isOnline) {
+                motd.innerHTML = data.motd?.html ? data.motd.html.join('<br>') : (data.motd?.clean ? data.motd.clean.join(' ') : 'Welcome to MineFun!');
+                document.getElementById('s-players').innerText = `${data.players.online} / ${data.players.max}`;
+                document.getElementById('s-version').innerText = data.version || 'Unknown';
+                
+                if(data.icon) {
+                    iconImg.src = data.icon;
+                    iconImg.classList.remove('hidden');
+                    iconNone.classList.add('hidden');
+                } else {
+                    iconImg.classList.add('hidden');
+                    iconNone.classList.remove('hidden');
+                }
+
+                if(data.players.list && data.players.list.length > 0) {
+                    pArea.classList.remove('hidden');
+                    pGrid.innerHTML = data.players.list.map(p => `
+                        <div class="player-chip">
+                            <img src="https://mc-heads.net/avatar/${p}/20" class="w-5 h-5 rounded">
+                            <span class="truncate">${p}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    pArea.classList.add('hidden');
+                }
+            } else {
+                motd.innerText = "The server is currently offline or hibernating.";
+                document.getElementById('s-players').innerText = "0 / 0";
+                document.getElementById('s-version').innerText = "---";
+                pArea.classList.add('hidden');
+                iconImg.classList.add('hidden');
+                iconNone.classList.remove('hidden');
+            }
+
+            document.getElementById('s-last').innerText = `Updated: ${new Date().toLocaleTimeString()}`;
+        }
+
+        function setTrackerMode(m) {
+            trackerMode = m;
+            document.getElementById('m-java').className = m === 'java' ? 'flex-1 py-2 rounded-lg text-sm font-bold transition bg-white/10 text-white' : 'flex-1 py-2 rounded-lg text-sm font-bold transition text-gray-500';
+            document.getElementById('m-bedrock').className = m === 'bedrock' ? 'flex-1 py-2 rounded-lg text-sm font-bold transition bg-white/10 text-white' : 'flex-1 py-2 rounded-lg text-sm font-bold transition text-gray-500';
+            refreshServerStatus();
+        }
+
+        // Copy to clipboard
+        function copyText(text) {
+            const el = document.createElement('textarea');
+            el.value = text;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            
+            const toast = document.getElementById('toast');
+            toast.style.opacity = '1';
+            toast.style.transform = 'translate(-50%, -10px)';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translate(-50%, 0)';
+            }, 2000);
+        }
+
+        // Mobile Menu Toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        // Initialize Content
         window.onload = () => {
             lucide.createIcons();
             
@@ -538,34 +760,15 @@
                 `;
                 
                 if(idx < 8) homeGrid.innerHTML += cardHtml;
-                fullGrid.innerHTML += cardHtml;
+                if(fullGrid) fullGrid.innerHTML += cardHtml;
             });
             
             lucide.createIcons();
+            refreshServerStatus();
         };
 
-        // Mobile Menu Toggle
-        document.getElementById('mobile-menu-button').addEventListener('click', () => {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        });
-
-        // Copy to clipboard
-        function copyText(text) {
-            const el = document.createElement('textarea');
-            el.value = text;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            
-            const toast = document.getElementById('toast');
-            toast.style.opacity = '1';
-            toast.style.transform = 'translate(-1/2, -10px)';
-            setTimeout(() => {
-                toast.style.opacity = '0';
-                toast.style.transform = 'translate(-1/2, 0)';
-            }, 2000);
-        }
+        // Polling loop
+        setInterval(refreshServerStatus, 60000); // Auto refresh every minute
     </script>
 </body>
 </html>
